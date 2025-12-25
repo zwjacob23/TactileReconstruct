@@ -13,4 +13,7 @@ def uncertainty_weighted_loss(task_loss, log_var):
     precision = torch.exp(-log_var_clamped)
     weighted_loss = 0.5 * precision * task_loss + 0.5 * log_var_clamped
     return weighted_loss
-    
+
+
+
+## hhh
