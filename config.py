@@ -12,6 +12,7 @@ def get_args():
     
     # 训练超参数
     parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--PCGrad', action='store_true', help='是否使用 PCGrad 优化器')
     parser.add_argument('--epoch', type=int, default=500)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--weight_decay', type=float, default=1e-4)

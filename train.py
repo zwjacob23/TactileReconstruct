@@ -7,7 +7,7 @@ from contrastive import SupConLoss
 # 引入第三方库 (确保安装了 chamferdist 或类似的库)
 # 如果你使用的是自定义的 chamferdistance文件，请确保它在路径中
 from chanmferdistance import ChamferDistance
-
+from pcgrad import PCGrad
 # 引入自定义模块
 from config import get_args
 from utils import save_point_cloud_as_pts, ensure_dirs
@@ -33,8 +33,11 @@ def main():
     # ================= 3. 初始化模型与优化器 =================
     model = TactileTransformerMTL(args, use_contrastive=True).to(device)
     weight_contrastive = 0.1 ## 对比学习超参 对比学习的权重
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
+    if args.PCGrad: # 如果打开了PCGrad
+        base_optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        optimizer = PCGrad(base_optimizer)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     # 定义损失函数
     chamfer_distance = ChamferDistance()
     criterion_radius = nn.MSELoss()
@@ -97,11 +100,20 @@ def main():
                 # 只有当 Batch 里至少有两个样本时才能算对比
                 if features.shape[0] > 1:
                     loss_contrastive = criterion_supcon(features, labels)
-            # Shape Loss 被忽略 (weight=0)
-            total_loss = loss_pc + loss_rad + loss_theta + (weight_contrastive * loss_contrastive)
             
-            total_loss.backward()
-            optimizer.step()
+            if args.PCGrad:
+                
+                losses = [loss_pc, loss_rad, loss_theta]
+                if loss_contrastive.item() > 0 and args.PCGrad:
+                    losses.append(loss_contrastive * weight_contrastive)
+                total_loss = sum(losses)
+                optimizer.zero_grad()
+                optimizer.pc_backward(losses) # <--- 使用 PCGrad 的 backward
+                optimizer.step()
+            else:
+                total_loss = loss_pc + loss_rad + loss_theta + (weight_contrastive * loss_contrastive)
+                total_loss.backward()
+                optimizer.step()
             
             # 记录数据
             running_loss += total_loss.item()
@@ -151,7 +163,7 @@ def main():
                     l_rad = uncertainty_weighted_loss(l_rad_raw, model.log_var_radius)
                     l_th = uncertainty_weighted_loss(l_theta_raw, model.log_var_theta)
                     
-                    current_batch_total_loss = l_pc + l_rad + l_th
+                    current_batch_total_loss = l_pc_raw
                     
                     # 记录 Epoch 统计
                     test_epoch_loss += current_batch_total_loss.item()
