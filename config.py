@@ -11,8 +11,8 @@ def get_args():
     parser.add_argument('--test_label_dir', type=str, default='./output_pointclouds/test_2/label')
     
     # 训练超参数
-    parser.add_argument('--batch_size', type=int, default=8)
-    parser.add_argument('--epoch', type=int, default=200)
+    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--epoch', type=int, default=500)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--weight_decay', type=float, default=1e-4)
     

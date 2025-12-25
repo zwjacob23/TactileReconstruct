@@ -3,7 +3,7 @@ import torch.optim as optim
 import torch.nn as nn
 import os
 import sys
-
+from contrastive import SupConLoss
 # 引入第三方库 (确保安装了 chamferdist 或类似的库)
 # 如果你使用的是自定义的 chamferdistance文件，请确保它在路径中
 from chanmferdistance import ChamferDistance
@@ -22,6 +22,7 @@ def main():
     
     # 设置设备
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    criterion_supcon = SupConLoss(temperature=0.07).to(device)
     print(f"Using device: {device}")
 
     # ================= 2. 准备数据 =================
@@ -30,9 +31,8 @@ def main():
     print(f"Data loaded. Train batches: {len(dataloader_train)}, Test batches: {len(dataloader_test)}")
 
     # ================= 3. 初始化模型与优化器 =================
-    model = TactileTransformerMTL(args)
-    model = model.to(device)
-    
+    model = TactileTransformerMTL(args, use_contrastive=True).to(device)
+    weight_contrastive = 0.1 ## 对比学习超参 对比学习的权重
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     # 定义损失函数
@@ -88,8 +88,17 @@ def main():
             loss_rad = uncertainty_weighted_loss(loss_rad_raw, model.log_var_radius)
             loss_theta = uncertainty_weighted_loss(loss_theta_raw, model.log_var_theta)
             
+            # 3. 计算对比学习loss
+            loss_contrastive = torch.tensor(0.0).to(device)
+            if 'contrastive_embed' in outputs:
+                features = outputs['contrastive_embed'] # [Batch, 128]
+                labels = target_shape                   # [Batch]
+            
+                # 只有当 Batch 里至少有两个样本时才能算对比
+                if features.shape[0] > 1:
+                    loss_contrastive = criterion_supcon(features, labels)
             # Shape Loss 被忽略 (weight=0)
-            total_loss = loss_pc + loss_rad + loss_theta 
+            total_loss = loss_pc + loss_rad + loss_theta + (weight_contrastive * loss_contrastive)
             
             total_loss.backward()
             optimizer.step()

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from contrastive import ProjectionHead
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=50):
@@ -18,7 +19,7 @@ class PositionalEncoding(nn.Module):
         return x
 
 class TactileTransformerMTL(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, use_contrastive=False):
         super(TactileTransformerMTL, self).__init__()
         
         # 从 args 中解包参数
@@ -49,6 +50,10 @@ class TactileTransformerMTL(nn.Module):
         # 共享的特征提取层
         self.shared_fc = nn.Linear(384, 256)
         self.shared_fc2 = nn.Linear(256, 256)
+        self.use_contrastive = use_contrastive
+        if self.use_contrastive:
+            # 这里的输入维度 256 必须对应 shared_features 的维度
+            self.contrastive_head = ProjectionHead(input_dim=256, output_dim=128)
         
         # ========== 任务特定的头 ==========
         self.pointcloud_head = nn.Sequential(
@@ -93,6 +98,7 @@ class TactileTransformerMTL(nn.Module):
             x3 = x3.squeeze()
         if x3.dim() == 1:
             x3 = x3.unsqueeze(0)
+
         
         x1 = self.embedding1(x1)
         x2 = self.embedding2(x2)
@@ -120,10 +126,17 @@ class TactileTransformerMTL(nn.Module):
         shape_output = self.shape_head(shared_features)
         radius_seq_output = self.radius_seq_head(shared_features)
         theta_seq_output = self.theta_seq_head(shared_features)
-             
-        return {
+        output_dict = {
             'pointcloud': pointcloud_output,
-            'shape': shape_output,
             'radius_seq': radius_seq_output,
-            'theta_seq': theta_seq_output
+            'theta_seq': theta_seq_output,
+            'shape': shape_output # 可以保留也可以不用
         }
+        # ===【新增逻辑】===
+        if self.use_contrastive:
+            # 将共享特征投影到对比空间
+            contrastive_embed = self.contrastive_head(shared_features)
+            output_dict['contrastive_embed'] = contrastive_embed
+            
+        return output_dict
+        
