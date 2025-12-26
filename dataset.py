@@ -32,8 +32,8 @@ def load_data(args):
     """
     负责读取pkl文件，并进行数据清洗和划分
     """
-    dataset_path = os.path.join(args.root, 'dataset2', 'dataset2_addedlabel.pkl')
-    ind_path = os.path.join(args.root, 'dataset2', 'hand20_ind.pkl')
+    dataset_path = os.path.join(args.root,  'dataset2_addedlabel.pkl')
+    ind_path = os.path.join(args.root, 'hand20_ind.pkl')
 
     with open(dataset_path, 'rb') as file:
         data = pickle.load(file)

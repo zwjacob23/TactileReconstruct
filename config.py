@@ -4,7 +4,7 @@ def get_args():
     parser = argparse.ArgumentParser(description="Tactile Transformer MTL Training")
     
     # 路径设置
-    parser.add_argument('--root', type=str, default='../data', help='数据根目录')
+    parser.add_argument('--root', type=str, default='D:/reaserch/reconstruction-master/data', help='数据根目录')
     parser.add_argument('--train_predict_dir', type=str, default='./output_pointclouds/train_2/predict')
     parser.add_argument('--train_label_dir', type=str, default='./output_pointclouds/train_2/label')
     parser.add_argument('--test_predict_dir', type=str, default='./output_pointclouds/test_2/predict')
