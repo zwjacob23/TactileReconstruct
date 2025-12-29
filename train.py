@@ -95,20 +95,20 @@ def main():
             unc_map = outputs['uncertainty_map'] 
             global_feat = outputs['shared_features']
             # 2. Stage 2 精修 (输入: 坐标 + 地图)
-            fine_pc = refiner(coarse_pc.detach(), unc_map.detach(), global_feat.detach())
+            fine_pc = refiner(coarse_pc.detach(), unc_map, global_feat)
             
             # --- Loss Calculation ---
             
             # (A) Coarse Loss (Stage 1 监督)
             l_coarse_raw = criterion_pcd(coarse_pc, target_pc)
             l_coarse = uncertainty_weighted_loss(l_coarse_raw, model.log_var_pointcloud)
-            
+            l_unc_reg = torch.mean(unc_map) * 0.001
             # (B) Fine Loss (Stage 2 监督)
             # 这里是最终输出，我们希望它越准越好
             l_fine_raw = criterion_pcd(fine_pc, target_pc)
             # 这里可以选择是否加权，简单起见，作为硬约束不加权，或者共用 log_var
             # 既然是最终目标，直接作为主 Loss
-            l_fine = l_fine_raw 
+            l_fine = l_fine_raw + l_unc_reg
             
             # (C) 辅助任务 Loss
             l_rad_raw = criterion_radius(outputs['radius_seq'], target_rad)
