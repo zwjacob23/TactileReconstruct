@@ -83,6 +83,12 @@ class TactileTransformerMTL(nn.Module):
             nn.Linear(128, seq_len)
         )
         
+        # 新增的uncertainty_head
+        self.uncertainty_head = nn.Sequential(
+            nn.Linear(256, args.pointsNum), 
+            nn.Sigmoid() 
+        )
+
         # ========== Uncertainty Weighting 参数 ==========
         self.log_var_pointcloud = nn.Parameter(torch.zeros(1))
         self.log_var_shape = nn.Parameter(torch.zeros(1))
@@ -122,12 +128,19 @@ class TactileTransformerMTL(nn.Module):
         
         pointcloud_output = self.pointcloud_head(shared_features)
         pointcloud_output = pointcloud_output.view(-1, self.pointsNum, 3)
+
+        # 2. ===【新增】生成 Uncertainty Map ===
+        # 输出形状 [B, N, 1]
+        uncertainty_map = self.uncertainty_head(shared_features)
+        uncertainty_map = uncertainty_map.view(-1, self.pointsNum, 1)
         
         shape_output = self.shape_head(shared_features)
         radius_seq_output = self.radius_seq_head(shared_features)
         theta_seq_output = self.theta_seq_head(shared_features)
         output_dict = {
             'pointcloud': pointcloud_output,
+            'uncertainty_map': uncertainty_map,  # <--- 新增
+            'shared_features': shared_features,
             'radius_seq': radius_seq_output,
             'theta_seq': theta_seq_output,
             'shape': shape_output # 可以保留也可以不用
