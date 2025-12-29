@@ -214,7 +214,7 @@ def main():
             avg_test_loss = test_epoch_loss / len(dataloader_test)
             print(f">>> Epoch {epoch + 1} Test Summary <<<")
             print(f"    Avg Total Loss: {avg_test_loss:.4f}")
-            print(f"    Avg PC Raw: {test_pc_raw_sum/len(dataloader_test):.4f}")
+            print(f"    Avg PC Raw: {test_pc_raw_sum/len(dataloader_test):.4f}") # 这里打印的是一个batch里面的pc raw的平均值
             print("-" * 60 + "\n")
 
     # ================= 6. 训练结束总结 =================
