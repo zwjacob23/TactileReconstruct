@@ -4,7 +4,7 @@ def get_args():
     parser = argparse.ArgumentParser(description="Tactile Transformer MTL Training")
     
     # 路径设置
-    parser.add_argument('--root', type=str, default='D:/reaserch/reconstruction-master/data', help='数据根目录')
+    parser.add_argument('--root', type=str, default='../data', help='数据根目录')
     parser.add_argument('--train_predict_dir', type=str, default='./output_pointclouds/train_2/predict')
     parser.add_argument('--train_label_dir', type=str, default='./output_pointclouds/train_2/label')
     parser.add_argument('--test_predict_dir', type=str, default='./output_pointclouds/test_2/predict')
@@ -13,7 +13,7 @@ def get_args():
     # 训练超参数
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--PCGrad', action='store_true', help='是否使用 PCGrad 优化器')
-    parser.add_argument('--epoch', type=int, default=500)
+    parser.add_argument('--epoch', type=int, default=300)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--weight_decay', type=float, default=1e-4)
     

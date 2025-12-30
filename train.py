@@ -14,12 +14,39 @@ from utils import save_point_cloud_as_pts, ensure_dirs
 from loss import uncertainty_weighted_loss
 from model import TactileTransformerMTL
 from dataset import get_dataloaders
+import random
+import os
+import numpy as np
+import torch
 
+def setup_seed(seed=42):
+    """
+    固定所有可能的随机种子，确保实验可复现
+    """
+    # 1. 固定 Python 内置随机种子
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    
+    # 2. 固定 NumPy 随机种子
+    np.random.seed(seed)
+    
+    # 3. 固定 PyTorch CPU 和 GPU 随机种子
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed) # 如果使用多 GPU
+    
+    # 4. 【关键】配置 CuDNN
+    # deterministic=True 强制使用确定性卷积算法
+    # benchmark=False 禁用自动寻找最快算法（因为不同算法在不同硬件上可能结果不同）
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    
+    print(f">> [Info] Random seed set to {seed}. Results will be reproducible.")
 def main():
     # ================= 1. 初始化设置 =================
     args = get_args()
     ensure_dirs(args)
-    
+    setup_seed(42) # 你可以选择任何你喜欢的整数，比如 42, 0, 2023
     # 设置设备
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     criterion_supcon = SupConLoss(temperature=0.07).to(device)
@@ -162,7 +189,6 @@ def main():
                     l_pc = uncertainty_weighted_loss(l_pc_raw, model.log_var_pointcloud)
                     l_rad = uncertainty_weighted_loss(l_rad_raw, model.log_var_radius)
                     l_th = uncertainty_weighted_loss(l_theta_raw, model.log_var_theta)
-                    
                     current_batch_total_loss = l_pc_raw
                     
                     # 记录 Epoch 统计
