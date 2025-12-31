@@ -17,7 +17,62 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.pe[:,0, :]
         return x
+class FoldingNetDec(nn.Module):
+    """
+    基于流形的折叠解码器 (Manifold Folding Decoder)
+    替代原本的全连接解码头，从 2D 栅格折叠出 3D 表面
+    """
+    def __init__(self, input_dim, num_points=800):
+        super(FoldingNetDec, self).__init__()
+        self.num_points = num_points
+        self.input_dim = input_dim
+        
+        # 生成一个固定的 2D 随机网格或规则网格作为折叠基础
+        # 形状: [1, 2, num_points]
+        self.register_buffer('grid', torch.randn(1, 2, num_points))
+        
+        # Folding 1: 将 Feature + 2D Grid -> 初步 3D 坐标
+        self.fold1 = nn.Sequential(
+            nn.Conv1d(input_dim + 2, 512, 1),
+            nn.ReLU(),
+            nn.BatchNorm1d(512),
+            nn.Conv1d(512, 512, 1),
+            nn.ReLU(),
+            nn.BatchNorm1d(512),
+            nn.Conv1d(512, 3, 1) # 输出 [B, 3, N]
+        )
+        
+        # Folding 2: Refinement (精细化调整)
+        # 将 Feature + 上一步的 3D 坐标 -> 最终 3D 坐标
+        self.fold2 = nn.Sequential(
+            nn.Conv1d(input_dim + 3, 512, 1),
+            nn.ReLU(),
+            nn.BatchNorm1d(512),
+            nn.Conv1d(512, 512, 1),
+            nn.ReLU(),
+            nn.BatchNorm1d(512),
+            nn.Conv1d(512, 3, 1)
+        )
 
+    def forward(self, feature):
+        # feature: [Batch, D] (Global Feature)
+        batch_size = feature.size(0)
+        
+        # 1. 复制全局特征以匹配点数: [Batch, D, N]
+        feature = feature.unsqueeze(2).expand(-1, -1, self.num_points)
+        
+        # 2. 准备 Grid: [Batch, 2, N]
+        grid = self.grid.expand(batch_size, -1, -1)
+        
+        # 3. 第一次折叠 (拼接 Feature 和 Grid)
+        x = torch.cat([feature, grid], dim=1) # [Batch, D+2, N]
+        last_x = self.fold1(x) # [Batch, 3, N]
+        
+        # 4. 第二次折叠 (拼接 Feature 和 上一次的 3D)
+        x = torch.cat([feature, last_x], dim=1) # [Batch, D+3, N]
+        final_x = self.fold2(x) # [Batch, 3, N]
+        
+        return final_x.transpose(1, 2) # 输出 [Batch, N, 3]
 class TactileTransformerMTL(nn.Module):
     def __init__(self, args, use_contrastive=False):
         super(TactileTransformerMTL, self).__init__()
@@ -56,14 +111,14 @@ class TactileTransformerMTL(nn.Module):
             self.contrastive_head = ProjectionHead(input_dim=256, output_dim=128)
         
         # ========== 任务特定的头 ==========
-        self.pointcloud_head = nn.Sequential(
-            nn.Linear(256, pointsNum),
-            nn.ReLU(),
-            nn.Linear(pointsNum, pointsNum),
-            nn.ReLU(),
-            nn.Linear(pointsNum, pointsNum * 3)
-        )
-        
+        # self.pointcloud_head = nn.Sequential(
+        #     nn.Linear(256, pointsNum),
+        #     nn.ReLU(),
+        #     nn.Linear(pointsNum, pointsNum),
+        #     nn.ReLU(),
+        #     nn.Linear(pointsNum, pointsNum * 3)
+        # )
+        self.pointcloud_head = FoldingNetDec(input_dim=256, num_points=pointsNum)
         self.shape_head = nn.Sequential(
             nn.Linear(256, 128),
             nn.ReLU(),
