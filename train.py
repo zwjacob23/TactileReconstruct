@@ -114,6 +114,16 @@ def main():
             loss_theta_raw = criterion_theta(outputs['theta_seq'], target_theta)
             
             # 2. 计算 Uncertainty Weighted Loss
+        if epoch < 50:
+            # 强制热身阶段：手动加权
+            # Chamfer Distance 数值通常很小 (0.04)，需要乘以大系数才能跟其他 Loss 匹敌
+            loss_pc = loss_pc_raw * 20.0 
+            
+            # 其他辅助任务可以继续用 Uncertainty，或者也手动给个系数
+            loss_rad = loss_rad_raw * 1.0
+            loss_theta = loss_theta_raw * 1.0
+        else:
+            # 50 Epoch 后，让模型自动调整 (或者你觉得手动好，就一直手动)
             loss_pc = uncertainty_weighted_loss(loss_pc_raw, model.log_var_pointcloud)
             loss_rad = uncertainty_weighted_loss(loss_rad_raw, model.log_var_radius)
             loss_theta = uncertainty_weighted_loss(loss_theta_raw, model.log_var_theta)
