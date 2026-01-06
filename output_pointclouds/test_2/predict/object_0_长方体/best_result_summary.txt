@@ -1,0 +1,16 @@
+
+============================== TRAINING FINISHED ==============================
+全过程最佳 Batch 记录 (Global Best Batch Record):
+  - Epoch: 1180
+  - Batch Index: 0
+  - Total Loss (Weighted): 0.049725
+  - Detailed Weighted Losses:
+      PC: -0.224152
+      Radius: -0.399190
+      Theta: -0.403449
+  - Detailed Raw Losses:
+      PC: 0.049725
+      Radius: 0.004870
+      Theta: 0.000756
+最佳结果文件已保存在: ./output_pointclouds/test_2/predict\object_0_长方体
+================================================================================

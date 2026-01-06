@@ -18,7 +18,8 @@ import random
 import os
 import numpy as np
 import torch
-
+# 在 train.py 顶部导入
+from loss import uncertainty_weighted_loss
 def setup_seed(seed=42):
     """
     固定所有可能的随机种子，确保实验可复现
@@ -58,7 +59,7 @@ def main():
     print(f"Data loaded. Train batches: {len(dataloader_train)}, Test batches: {len(dataloader_test)}")
 
     # ================= 3. 初始化模型与优化器 =================
-    model = TactileTransformerMTL(args, use_contrastive=True).to(device)
+    model = TactileTransformerMTL(args, use_contrastive=False).to(device)
     weight_contrastive = 0.1 ## 对比学习超参 对比学习的权重
     if args.PCGrad: # 如果打开了PCGrad
         base_optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -112,6 +113,7 @@ def main():
             loss_pc_raw = chamfer_distance(outputs['pointcloud'], target_pc)
             loss_rad_raw = criterion_radius(outputs['radius_seq'], target_rad)
             loss_theta_raw = criterion_theta(outputs['theta_seq'], target_theta)
+
             
             # 2. 计算 Uncertainty Weighted Loss
         if epoch < 50:
@@ -124,9 +126,9 @@ def main():
             loss_theta = loss_theta_raw * 1.0
         else:
             # 50 Epoch 后，让模型自动调整 (或者你觉得手动好，就一直手动)
-            loss_pc = uncertainty_weighted_loss(loss_pc_raw, model.log_var_pointcloud)
-            loss_rad = uncertainty_weighted_loss(loss_rad_raw, model.log_var_radius)
-            loss_theta = uncertainty_weighted_loss(loss_theta_raw, model.log_var_theta)
+            loss_pc = uncertainty_weighted_loss(loss_pc_raw, model.log_var_pointcloud, regularization_weight=0.2)
+            loss_rad = uncertainty_weighted_loss(loss_rad_raw, model.log_var_radius, regularization_weight=0.1)
+            loss_theta = uncertainty_weighted_loss(loss_theta_raw, model.log_var_theta, regularization_weight=0.1)
             
             # 3. 计算对比学习loss
             loss_contrastive = torch.tensor(0.0).to(device)
@@ -196,9 +198,9 @@ def main():
                     l_theta_raw = criterion_theta(outputs['theta_seq'], target_theta)
                     
                     # 2. 计算加权 Loss
-                    l_pc = uncertainty_weighted_loss(l_pc_raw, model.log_var_pointcloud)
-                    l_rad = uncertainty_weighted_loss(l_rad_raw, model.log_var_radius)
-                    l_th = uncertainty_weighted_loss(l_theta_raw, model.log_var_theta)
+                    l_pc = uncertainty_weighted_loss(l_pc_raw, model.log_var_pointcloud, regularization_weight=0.2)
+                    l_rad = uncertainty_weighted_loss(l_rad_raw, model.log_var_radius, regularization_weight=0.1)
+                    l_th = uncertainty_weighted_loss(l_theta_raw, model.log_var_theta, regularization_weight=0.1)
                     current_batch_total_loss = l_pc_raw
                     
                     # 记录 Epoch 统计
@@ -238,7 +240,13 @@ def main():
                             
                             # 文件名: best_sample_{k}.pts (始终覆盖旧的 best，保证文件夹里只有最好的)
                             # 如果你想保留历史记录，可以在文件名里加上 epoch: f'best_ep{epoch+1}_sample_{k}.pts'
-                            pred_path = os.path.join(args.test_predict_dir, f'best_sample_{k}.pts')
+                            if isinstance(args.testobj, list):
+                                testobj_name = args.testobj[0]
+                            else:
+                                testobj_name = args.testobj
+                            subdir = f"{args.smode}_{args.nmode}_{testobj_name}"
+                            pred_dir = os.path.join(args.test_predict_dir, subdir)
+                            pred_path = os.path.join(pred_dir, f"best_sample_{global_best_info['loss_pc_raw']:.6f}.pts")
                             label_path = os.path.join(args.test_label_dir, f'best_sample_{k}.pts')
                             
                             save_point_cloud_as_pts(pc_np, pred_path)
@@ -254,21 +262,32 @@ def main():
             print("-" * 60 + "\n")
 
     # ================= 6. 训练结束总结 =================
-    print("\n" + "="*30 + " TRAINING FINISHED " + "="*30)
-    print(f"全过程最佳 Batch 记录 (Global Best Batch Record):")
-    print(f"  - Epoch: {global_best_info['epoch']}")
-    print(f"  - Batch Index: {global_best_info['batch_idx']}")
-    print(f"  - Total Loss (Weighted): {global_best_info['total_loss']:.6f}")
-    print(f"  - Detailed Weighted Losses:")
-    print(f"      PC: {global_best_info['loss_pc_weighted']:.6f}")
-    print(f"      Radius: {global_best_info['loss_rad_weighted']:.6f}")
-    print(f"      Theta: {global_best_info['loss_theta_weighted']:.6f}")
-    print(f"  - Detailed Raw Losses:")
-    print(f"      PC: {global_best_info['loss_pc_raw']:.6f}")
-    print(f"      Radius: {global_best_info['loss_rad_raw']:.6f}")
-    print(f"      Theta: {global_best_info['loss_theta_raw']:.6f}")
-    print(f"最佳结果文件已保存在: {args.test_predict_dir}")
-    print("="*80)
+    summary_lines = []
+    summary_lines.append("\n" + "="*30 + " TRAINING FINISHED " + "="*30)
+    summary_lines.append("全过程最佳 Batch 记录 (Global Best Batch Record):")
+    summary_lines.append(f"  - Epoch: {global_best_info['epoch']}")
+    summary_lines.append(f"  - Batch Index: {global_best_info['batch_idx']}")
+    summary_lines.append(f"  - Total Loss (Weighted): {global_best_info['total_loss']:.6f}")
+    summary_lines.append("  - Detailed Weighted Losses:")
+    summary_lines.append(f"      PC: {global_best_info['loss_pc_weighted']:.6f}")
+    summary_lines.append(f"      Radius: {global_best_info['loss_rad_weighted']:.6f}")
+    summary_lines.append(f"      Theta: {global_best_info['loss_theta_weighted']:.6f}")
+    summary_lines.append("  - Detailed Raw Losses:")
+    summary_lines.append(f"      PC: {global_best_info['loss_pc_raw']:.6f}")
+    summary_lines.append(f"      Radius: {global_best_info['loss_rad_raw']:.6f}")
+    summary_lines.append(f"      Theta: {global_best_info['loss_theta_raw']:.6f}")
+    summary_lines.append(f"最佳结果文件已保存在: {pred_dir}")
+    summary_lines.append("="*80)
+
+    summary_text = "\n".join(summary_lines)
+    # 打印到终端
+    print(summary_text)
+    summary_path = os.path.join(pred_dir, "best_result_summary.txt")
+    # 写入 txt 文件
+    with open(summary_path, "w", encoding="utf-8") as f:
+        f.write(summary_text)
+
+    print(f"[INFO] Best result summary saved to: {pred_dir}")
 
 if __name__ == "__main__":
     main()

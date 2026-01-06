@@ -1,0 +1,16 @@
+
+============================== TRAINING FINISHED ==============================
+全过程最佳 Batch 记录 (Global Best Batch Record):
+  - Epoch: 30
+  - Batch Index: 0
+  - Total Loss (Weighted): 0.321620
+  - Detailed Weighted Losses:
+      PC: 0.160810
+      Radius: 0.113680
+      Theta: 0.021165
+  - Detailed Raw Losses:
+      PC: 0.321620
+      Radius: 0.227359
+      Theta: 0.042331
+最佳结果文件已保存在: ./output_pointclouds/test_2/predict\object_2_怡宝
+================================================================================

@@ -2,7 +2,12 @@ import argparse
 
 def get_args():
     parser = argparse.ArgumentParser(description="Tactile Transformer MTL Training")
-    
+    parser.add_argument('--smode', type=str, default='object', 
+                        help="划分模式: 'object', 'round', 'subject'")
+    parser.add_argument('--nmode', type=str, default='3', 
+                        help="几点式交互: '2', '3', '5'")
+    parser.add_argument('--testobj', nargs='+', default=['七喜'], 
+                        help="测试集包含的物体名称 (仅在 object 模式下生效)")
     # 路径设置
     parser.add_argument('--root', type=str, default='../data', help='数据根目录')
     parser.add_argument('--train_predict_dir', type=str, default='./output_pointclouds/train_2/predict')
@@ -13,7 +18,7 @@ def get_args():
     # 训练超参数
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--PCGrad', action='store_true', help='是否使用 PCGrad 优化器')
-    parser.add_argument('--epoch', type=int, default=300)
+    parser.add_argument('--epoch', type=int, default=5555)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--weight_decay', type=float, default=1e-4)
     
@@ -25,5 +30,6 @@ def get_args():
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--dim_feedforward', type=int, default=256)
     parser.add_argument('--seq_len', type=int, default=20)
+
     
     return parser.parse_args()
