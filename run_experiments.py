@@ -5,13 +5,13 @@ python = sys.executable  # 保证用的是当前环境的 python
 experiments = []
 
 # -------- round 模式 --------
-round_nmodes = [0, 2, 3, 5]
+round_nmodes = [2, 3, 5]
 
-# for nmode in round_nmodes:
-#     experiments.append({
-#         "nmode": nmode,
-#         "smode": "round",
-#     })
+for nmode in round_nmodes:
+    experiments.append({
+        "nmode": nmode,
+        "smode": "round",
+    })
 # for nmode in round_nmodes:
 #     experiments.append({
 #         "nmode": nmode,
@@ -25,13 +25,13 @@ test_objects = [
     '薯片', '圆柱体', '红酒杯', '七喜'
 ]
 
-for nmd in round_nmodes:
-    for obj in test_objects:
-        experiments.append({
-            "nmode": nmd,
-            "smode": "object",
-            "testobj": obj,
-        })
+# for nmd in round_nmodes:
+#     for obj in test_objects:
+#         experiments.append({
+#             "nmode": nmd,
+#             "smode": "object",
+#             "testobj": obj,
+#         })
 
 for i, exp in enumerate(experiments):
     cmd = [python, "train.py"]
