@@ -85,7 +85,7 @@ def draw_error_heatmap(pred_path, gt_path, max_dist_threshold=0.05):
 # =========================================
 # 请替换成你实际的文件路径
 # 假设你有一个瓶子的预测和真值
-pred_file = "./example/高脚杯/0766高脚杯.pts" 
+pred_file = "./example/crossSubject/insub高脚杯.pts" 
 gt_file = "./pc_label/高脚杯.pts"
 
 # 创建一些假数据用于演示 (如果你没有现成的文件，取消下面注释来测试代码)
@@ -100,4 +100,4 @@ gt_file = "./pc_label/高脚杯.pts"
 # 运行绘图函数
 # 重要：根据你的物体尺寸调整 max_dist_threshold
 # 如果你的物体坐标是在 0-1 之间，0.05 意味着 5% 的误差就显示为最红
-draw_error_heatmap(pred_file, gt_file, max_dist_threshold=0.05)
+draw_error_heatmap(pred_file, gt_file, max_dist_threshold=0.015)

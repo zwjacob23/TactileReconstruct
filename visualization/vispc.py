@@ -65,8 +65,8 @@ def visualize_single_pcd(file_path, color_hex="#808080", point_size=3.0, estimat
 # ================= 使用示例 =================
 if __name__ == "__main__":
     # 替换你的 .pts 文件路径/good/014长方体.p
-    my_file = "./example/薯片/0125薯片.pts" 
-    #my_file = "./pc_label/乌龙.pts"
+    #my_file = "./example/薯片/0125薯片.pts" 
+    my_file = "./pc_label/海之言.pts"
     
     # 模拟生成一个文件测试用 (如果你没有文件，直接运行会看到一个随机球体)
     # 实际使用时请注释掉下面这三行
